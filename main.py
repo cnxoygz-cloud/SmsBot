@@ -1,5 +1,5 @@
-# main.py - Telegram Bot with Attack Functionality
-import asyncio
+# main.py - Updated for Render compatibility
+import os
 import logging
 import random
 import string
@@ -10,9 +10,10 @@ import uuid
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from telegram.constants import ParseMode
 import requests
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -21,9 +22,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Bot configuration
-BOT_TOKEN = "8223438076:AAGauseoqW_zIAkqXkoXWg_Tl1AJoHli0Xk"  # Replace with your bot token
-ADMIN_IDS = [8252162481]  # Add admin user IDs if needed
+# Get bot token from environment variable
+BOT_TOKEN = os.environ.get("8223438076:AAGauseoqW_zIAkqXkoXWg_Tl1AJoHli0Xk")
 
 class BombService:
     def __init__(self):
@@ -613,7 +613,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"`/help` - Show this menu\n\n"
         f"⚠️ **Disclaimer:** Use responsibly!\n"
         f"━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💬 **Support:** @YourChannel"
     )
     
     keyboard = [
@@ -667,31 +666,6 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode=ParseMode.MARKDOWN
         )
         return
-    
-    # Initial message with animation effect
-    init_msg = await update.message.reply_text(
-        f"🎯 **Target:** `{phone}`\n"
-        f"🔄 **Batches:** {batches}\n"
-        f"⚡ **Services:** 15 Active\n\n"
-        f"🚀 **Initializing attack...**\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"█░░░░░░░░░░░░░░░░░░░ 5%",
-        parse_mode=ParseMode.MARKDOWN
-    )
-    
-    await asyncio.sleep(0.5)
-    await init_msg.edit_text(
-        f"🎯 **Target:** `{phone}`\n"
-        f"🔄 **Batches:** {batches}\n"
-        f"⚡ **Services:** 15 Active\n\n"
-        f"🔥 **Attack in progress!**\n"
-        f"━━━━━━━━━━━━━━━━━━━\n"
-        f"███░░░░░░░░░░░░░░░░ 15%",
-        parse_mode=ParseMode.MARKDOWN
-    )
-    
-    await asyncio.sleep(0.5)
-    await init_msg.delete()
     
     status_msg = await update.message.reply_text(
         f"🔥 **ATTACK STARTED!** 🔥\n\n"
@@ -843,11 +817,21 @@ def main():
         ]
         await application.bot.set_my_commands(commands)
     
-    application.job_queue.run_once(lambda x: None, 0)
+    # Run setup
+    async def setup():
+        await set_commands()
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
     
-    # Start bot
-    print("🤖 Bot is starting...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Run the bot
+    asyncio.run(setup())
+    
+    # Keep the bot running
+    try:
+        asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     main()
