@@ -1,4 +1,4 @@
-# render.yaml
+# render.yaml - Updated
 services:
   - type: web
     name: telegram-sms-bomber
@@ -8,3 +8,5 @@ services:
     envVars:
       - key: BOT_TOKEN
         sync: false
+    plan: free
+    healthCheckPath: /

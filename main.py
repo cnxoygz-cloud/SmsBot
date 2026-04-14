@@ -1,4 +1,4 @@
-# main.py - Updated with better error handling
+# main.py - Fixed for Python 3.14 compatibility
 import os
 import logging
 import random
@@ -61,7 +61,7 @@ class BombService:
         data = f"{timestamp}{random_str}{phone_number}{secret}"
         return hashlib.sha256(data.encode()).hexdigest()
     
-    # Service implementations
+    # Service implementations (same as before - keeping for brevity)
     def send_bomb_otp(self, phone_number):
         try:
             formatted_phone = self.format_phone(phone_number)
@@ -540,7 +540,6 @@ class BombService:
                 await update_callback(f"🛑 Attack stopped by user")
                 break
             
-            batch_results = []
             with ThreadPoolExecutor(max_workers=15) as executor:
                 futures = []
                 for service_name, service_func in services:
@@ -552,15 +551,12 @@ class BombService:
                         success, message = future.result(timeout=10)
                         if success:
                             self.active_attacks[chat_id]['stats']['success'] += 1
-                            batch_results.append(f"✅ {service_name}")
                         else:
                             self.active_attacks[chat_id]['stats']['fail'] += 1
-                            batch_results.append(f"❌ {service_name}")
                         self.active_attacks[chat_id]['stats']['total'] += 1
                     except Exception as e:
                         self.active_attacks[chat_id]['stats']['fail'] += 1
                         self.active_attacks[chat_id]['stats']['total'] += 1
-                        batch_results.append(f"⚠️ {service_name}: {str(e)[:30]}")
             
             stats = self.active_attacks[chat_id]['stats']
             progress_msg = (
@@ -687,14 +683,17 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     async def update_status(message):
-        await status_msg.edit_text(
-            f"🔥 **ATTACK IN PROGRESS** 🔥\n\n"
-            f"📱 Target: `{phone}`\n"
-            f"🔄 Batches: {batches}\n"
-            f"━━━━━━━━━━━━━━━━━━━\n\n"
-            f"{message}",
-            parse_mode=ParseMode.MARKDOWN
-        )
+        try:
+            await status_msg.edit_text(
+                f"🔥 **ATTACK IN PROGRESS** 🔥\n\n"
+                f"📱 Target: `{phone}`\n"
+                f"🔄 Batches: {batches}\n"
+                f"━━━━━━━━━━━━━━━━━━━\n\n"
+                f"{message}",
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Error updating status: {e}")
     
     await bomb_service.run_attack(chat_id, phone, batches, update_status)
 
@@ -719,20 +718,29 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if chat_id in bomb_service.active_attacks:
         stats = bomb_service.active_attacks[chat_id]['stats']
-        status_text = (
-            f"📊 **Attack Status**\n"
-            f"━━━━━━━━━━━━━━━━━━━\n\n"
-            f"🟢 **Status:** Active\n"
-            f"✅ **Success:** {stats['success']}\n"
-            f"❌ **Failed:** {stats['fail']}\n"
-            f"📈 **Total:** {stats['total']}\n"
-            f"🎯 **Rate:** {(stats['success']/stats['total']*100):.1f}%"
-        )
+        if stats['total'] > 0:
+            status_text = (
+                f"📊 **Attack Status**\n"
+                f"━━━━━━━━━━━━━━━━━━━\n\n"
+                f"🟢 **Status:** Active\n"
+                f"✅ **Success:** {stats['success']}\n"
+                f"❌ **Failed:** {stats['fail']}\n"
+                f"📈 **Total:** {stats['total']}\n"
+                f"🎯 **Rate:** {(stats['success']/stats['total']*100):.1f}%"
+            )
+        else:
+            status_text = (
+                f"📊 **Attack Status**\n"
+                f"━━━━━━━━━━━━━━━━━━━\n\n"
+                f"🟢 **Status:** Active\n"
+                f"⏳ **Initializing...**"
+            )
         await update.message.reply_text(status_text, parse_mode=ParseMode.MARKDOWN)
     else:
         await update.message.reply_text(
             "🟢 **Status:** Idle\n\n"
-            "No active attacks running.",
+            "No active attacks running.\n"
+            "Use `/attack +639XXXXXXXXX` to start.",
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -800,8 +808,13 @@ def main():
     """Start the bot"""
     logger.info("🚀 Starting Telegram SMS Bomber Bot...")
     
-    # Create application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Create application with updated settings for Python 3.14
+    application = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .concurrent_updates(True)
+        .build()
+    )
     
     # Command handlers
     application.add_handler(CommandHandler("start", start))
@@ -819,7 +832,7 @@ def main():
     
     # Start the bot
     logger.info("✅ Bot is running and waiting for commands...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
