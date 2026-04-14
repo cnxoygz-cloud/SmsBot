@@ -1,0 +1,19 @@
+# vercel.json (for Vercel deployment)
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ],
+  "env": {
+    "BOT_TOKEN": "8223438076:AAGauseoqW_zIAkqXkoXWg_Tl1AJoHli0Xk"
+  }
+}
