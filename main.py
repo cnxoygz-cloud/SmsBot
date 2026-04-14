@@ -1,4 +1,4 @@
-# main.py - Updated for Render compatibility
+# main.py - Updated with better error handling
 import os
 import logging
 import random
@@ -14,6 +14,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from telegram.constants import ParseMode
 import requests
 import asyncio
+import sys
 
 # Configure logging
 logging.basicConfig(
@@ -23,7 +24,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Get bot token from environment variable
-BOT_TOKEN = os.environ.get("8223438076:AAGauseoqW_zIAkqXkoXWg_Tl1AJoHli0Xk")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+if not BOT_TOKEN:
+    logger.error("❌ BOT_TOKEN environment variable is not set!")
+    logger.error("Please set it in Render: Environment → Add Environment Variable")
+    logger.error("Key: BOT_TOKEN, Value: your_token_from_BotFather")
+    sys.exit(1)
+
+logger.info(f"✅ Bot token loaded successfully (length: {len(BOT_TOKEN)})")
 
 class BombService:
     def __init__(self):
@@ -789,6 +798,9 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot"""
+    logger.info("🚀 Starting Telegram SMS Bomber Bot...")
+    
+    # Create application
     application = Application.builder().token(BOT_TOKEN).build()
     
     # Command handlers
@@ -805,33 +817,9 @@ def main():
     # Error handler
     application.add_error_handler(error_handler)
     
-    # Set bot commands
-    async def set_commands():
-        commands = [
-            BotCommand("start", "Start the bot"),
-            BotCommand("attack", "Start SMS attack"),
-            BotCommand("stop", "Stop current attack"),
-            BotCommand("status", "Check attack status"),
-            BotCommand("services", "List all services"),
-            BotCommand("help", "Show help guide"),
-        ]
-        await application.bot.set_my_commands(commands)
-    
-    # Run setup
-    async def setup():
-        await set_commands()
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling()
-    
-    # Run the bot
-    asyncio.run(setup())
-    
-    # Keep the bot running
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        pass
+    # Start the bot
+    logger.info("✅ Bot is running and waiting for commands...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
